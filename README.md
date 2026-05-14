@@ -9,127 +9,126 @@
   </video>
 </div>
 
+# 🚀 UAV X-Vision: Reinforcement Learning Training System for Autonomous UAVs
 
-# 🚁 UAV X-Vision: Reinforcement Learning Framework for Autonomous UAVs
+## 🌟 Key Features
 
-## 🌟 Overview
-
-**UAV X-Vision** is a comprehensive training system for Unmanned Aerial Vehicles (UAVs) based on the *Iris* frame (Pegasus Simulation). Built on **NVIDIA Isaac Lab** and the **RSL-RL** framework, this project focuses on high-performance Reinforcement Learning (RL) for complex tasks including autonomous navigation, dynamic object tracking, and precision landing.
-
-The system integrates **AI Computer Vision** (YOLO/RT-DETR) for object detection and fire hazard identification, bridging the gap between simulation and real-world deployment (Sim-to-Real).
-
-## 🚀 Key Features
-
-*   **Multi-Task Support:** Specialized environments for **Navigation** (Point-to-Point), **Tracking** (Moving Targets/Random Walk), and **Landing**.
-*   **High-Fidelity Sensor Simulation:** 
-    *   **LiDAR:** Hesai XT32 SD10 (360° Point Cloud).
-    *   **Camera:** Intel RealSense D455 (RGB/Depth/IMU).
-*   **Massive Parallelism:** Trains 2048+ environments simultaneously on GPU using PyTorch Tensor API, achieving tens of thousands of FPS.
-*   **Curriculum Learning:** Multi-stage training pipelines to gradually increase environment complexity.
-*   **Sim-to-Real Pipeline:** Export models to **ONNX** for deployment on Edge AI hardware (Jetson Orin) and ROS 2 (Jazzy/Humble) integration for visualization via Foxglove.
-
----
+* **Multi-task Capabilities:** Supports **Navigation** (Point-to-Point), **Target Tracking** (Dynamic/Random Walk), and **Precision Landing**.
+* **Sim-to-Real Architecture & AI Perception:** Leverages Ground-Truth data for accelerated training in simulation. Supports real-world deployment by integrating AI models (YOLO/RT-DETR) for detecting people, vehicles, and fire hazards from camera feeds.
+* **Curriculum Learning:** Implements a staged training approach, progressing from basic hovering to complex environmental navigation.
+* **Industry-Standard Sensor Simulation:** High-fidelity simulation of the **Intel RealSense D455** (RGB/Depth/IMU) and **Hesai XT32 SD10 LiDAR** (360° Point Cloud).
+* **High-Performance Parallelism:** Simultaneously runs 2,048 – 4,096 environments directly on the GPU via PyTorch Tensor API. Optimized data collection using **Proximal Policy Optimization (PPO)**.
+* **Deployment & Visualization Ready:** Supports exporting trained models to **ONNX** format and bridging data to **ROS 2 (Jazzy/Humble)** for visualization via Foxglove.
 
 ## 📁 Project Structure
 
-The project follows a modular architecture separating Environments, MDP (Markov Decision Process) logic, and specific Tasks:
+The project features a highly modular architecture, clearly separating Environments, Markov Decision Processes (MDP), and specific Tasks:
 
 ```text
 uav/
-├── assets/                 # 3D Models (UAV Iris, Environments, Obstacles)
-├── envs/                   # Core Environment Configurations
-│   ├── env_cfg.py          # Robot, Prim paths, and Sensor definitions
-│   ├── observations/       # Processing RGB, Depth, and LiDAR data
-│   ├── rewards/            # Global reward functions (Avoidance, Smoothness)
-│   └── actions/            # Action Manager (Velocity/Thrust control)
-├── tasks/                  # Main RL Tasks
-│   ├── navigation_task/    # Point-to-Point Navigation
-│   ├── tracking_task/      # Dynamic Object Tracking
-│   └── landing_task/       # Precision Landing
-├── scripts/                # Entry points (train.py, play.py, benchmark.py)
-└── utils/                  # Drone & Hardware configurations
+├── assets/                 # 3D models (Iris UAV, environments, obstacles)
+├── envs/                   # Core environment configurations
+│   ├── env_cfg.py          # Definitions for Iris robot, prim paths, and sensors
+│   ├── observations/       # Processing RGB, Depth, LiDAR, and Ground-Truth data
+│   │   ├── rgb_observation.py      # UAV RGB camera sensor data
+│   │   ├── thermal_observation.py  # UAV thermal camera sensor data
+│   │   ├── lidar_observation.py    # LiDAR sensor data (1D Vector)
+│   │   └── observation.py          # Sensor fusion and mixed observations
+│   ├── rewards/            # General reward functions (Obstacle avoidance, crash penalties)
+│   │   ├── step_penalty.py         # Living penalty based on time steps
+│   │   ├── velocity_control_reward.# Velocity control optimization
+│   │   ├── crashing_penalty.py     # Penalty for UAV collisions
+│   │   ├── smoothness_penalty.py   # Penalty for abrupt maneuvers/motor jitters
+│   │   └── obstacle_avoidance_reward.py # Reward for avoiding hazards (fire, walls)
+│   ├── actions/            # Action Management (Low-level Thrust or High-level PID)
+│   │   └── action_manager.py       # Velocity-based drone control actions
+│   └── events/             # Event handling (Environment resets/initialization)
+│       ├── on_episode_reset.py     # Reset logic at the end of an episode
+│       └── on_episode_start.py     # Initialization logic at the start of an episode
+├── tasks/                  # Primary training tasks
+│   ├── navigation_task/    # Goal-oriented flight task
+│   ├── tracking_object_task/# Moving target pursuit task
+│   └── landing_task/       # Precision landing task
+├── scripts/                # Entry points for project execution
+│   ├── train.py            # Main training script
+│   ├── play.py             # Inference script for trained models (ROS 2/Foxglove support)
+│   └── benchmark.py        # Model performance evaluation
+├── logs/                   # RSL-RL checkpoints and logging directory
+└── utils/                  # Utility scripts and hardware configurations (drone_config.py)
 
 ```
 
----
+## 🧠 System Architecture & Workflow
 
-## 🧠 Training Strategy: Curriculum Learning
+1. **Entry Point (`scripts/train.py`):** Handles CLI parameters, initializes the Isaac Sim environment via `AppLauncher`, and triggers the training loop.
+2. **Orchestration:** Automatically manages the training lifecycle, including Curriculum Learning stage transitions, checkpoint saving, and dynamic spawning of UAVs/targets.
+3. **Core Logic (Tensor-based):** Built on Isaac Lab's `ManagerBasedRLEnvCfg`. All physics calculations, actions, and observations are processed directly on GPU VRAM using PyTorch Tensors to ensure simulation speeds of tens of thousands of FPS.
+4. **Deployment Pipeline:** In real-world deployment, D455 camera data is processed through an AI vision network (e.g., YOLO) to generate a context vector (3D target coordinates). This vector, combined with Point Cloud data, is fed into an MLP (ONNX model) to generate control signals.
 
-We utilize an MLP architecture (3 hidden layers x 128 units) trained across multiple stages to ensure robust policy convergence.
+## 🚀 Training Methodology: Curriculum Learning
 
-### Tracking Task Roadmap
+### 1. UAV Tracking Task
 
-| Stage | Name | Objective | Difficulty |
+The system utilizes an MLP network (3 hidden layers x 128 units, ELU activation) through a 4-stage roadmap:
+
+| Stage | Title | Objective | Difficulty |
 | --- | --- | --- | --- |
-| **Stage 1** | **Hover** | Maintain altitude at a fixed point. | Beginner |
-| **Stage 2** | **Track Static** | Reach and stay near a stationary target. | Easy |
-| **Stage 3** | **Track Moving** | Follow a target with Random Walk behavior. | Intermediate |
-| **Stage 4** | **Domain Rand.** | Add environmental noise (Wind, Fog, Lighting). | Expert |
+| **Stage 1** | **Hover** | Maintain stable altitude at a fixed coordinate. | Very Easy |
+| **Stage 2** | **Track Static** | Approach and maintain distance from a stationary target. | Easy |
+| **Stage 3** | **Track Moving** | Pursue a target moving with Random Walk behavior. | Medium |
+| **Stage 4** | **Domain Rand.** | Add environmental noise (Fog, Wind, Lighting). | Expert |
 
----
+### 2. UAV Navigation Task
 
-## ⚙️ Technical Specifications
+A 2-stage roadmap for autonomous navigation:
 
-### 1. Sensor Integration (ROS 2 Bridge)
+| Stage | Title | Objective | Difficulty |
+| --- | --- | --- | --- |
+| **Stage 1** | **Hover** | Maintain stable altitude at a fixed coordinate. | Very Easy |
+| **Stage 2** | **Navigate** | Fly autonomously to a designated target point. | Easy |
 
-The system supports industry-standard sensors for real-world parity:
+## ⚙️ Technical Configuration
 
-* **LiDAR (Hesai XT32):** `/point_cloud` topic at 10Hz.
-* **Camera (RealSense D455):** `/rgb` and `/imu` topics.
-* **Note:** ROS 2 bridge is used for **inference/visualization only**, not during training to avoid CPU bottlenecks.
+### 1. Iris Robot & Motor Prims
 
-### 2. Reward Shaping
+* **Model:** Iris (Pegasus Sim Assets). Estimated weight: 1.2kg - 1.5kg.
+* **Control Mechanisms:**
+* *Low-level:* Direct control of PWM/Thrust `[-1, 1]` for 4 rotors.
+* *High-level:* Outputting Roll, Pitch, Yaw, and Thrust commands for PID controllers (Pixhawk/PX4).
 
-* `target_tracking_reward`: Encourages the UAV to stay within the target's vicinity.
-* `fire_avoidance_penalty`: Heavy penalty for entering a 3m radius of `hazard_fire` semantic labels.
-* `smoothness_penalty`: Reduces erratic motor behavior for longer hardware lifespan.
 
----
+* **Control Prims:** `/Root/World/iris/rotor0` to `rotor3`.
 
-## 🛠️ Installation & Usage
+### 2. Observation Space
 
-### Training
+* **Ground-Truth (Simulation):** Direct absolute `[x, y, z]` coordinates for fast convergence.
+* **RayCaster 1D Vector:** Simulates LiDAR/Depth sensors by returning a 1D array (e.g., 108 dimensions) measuring obstacle distances.
+* **Altitude/Optical Flow:** Provides absolute Z-axis data to compensate for IMU drift.
 
-Run the curriculum training for specific tasks:
+### 3. Sensors & ROS 2 Bridge (Deploy/Visualize only)
+
+* **Hesai PandarXT-32 SD10:** Topic `/point_cloud`.
+* **Intel RealSense D455:** Topics `/rgb` and `/imu`.
+
+## 💻 Getting Started
+
+**Training the models:**
 
 ```bash
-# Activate environment
-conda activate env_isaaclab
-
-# Train Navigation Task
-./isaaclab.sh -p uav/source_v2/scripts/train.py --task UAV-Navigation-v2 --num_envs 2048 --enable_camera
-
-# Train Tracking Task
+# Tracking Task
 ./isaaclab.sh -p uav/source_v2/scripts/train.py --task UAV-Tracking-v2 --num_envs 2048
 
+# Navigation Task
+./isaaclab.sh -p uav/source_v2/scripts/train.py --task UAV-Navigation-v2 --num_envs 2048
+
+# Landing Task
+./isaaclab.sh -p uav/source_v2/scripts/train.py --task UAV-Landing-v2 --num_envs 2048
+
 ```
 
-### Visualization (Foxglove)
-
-To visualize sensor data, launch the Foxglove bridge:
+**Testing the trained model (Play):**
 
 ```bash
-ros2 launch foxglove_bridge foxglove_bridge_launch.xml address:=0.0.0.0 port:=8765
-
-```
-
-### Playback
-
-Test your trained model:
-
-```bash
-./isaaclab.sh -p scripts/play.py --task UAV-Tracking-v2
-
-```
-
----
-
-## 📡 Deployment (Sim-to-Real)
-
-The trained MLP models can be exported to **ONNX** format. In real-world scenarios, the visual context vector (Target 3D coordinates) is provided by a **YOLO/RT-DETR** model, which is then fed into the RL policy to output control signals.
-
----
-
-*Developed for AI-Native UAV Transformation Strategy.*
+./isaaclab.sh -p scripts/play.py --task tracking_object_task
 
 ```
