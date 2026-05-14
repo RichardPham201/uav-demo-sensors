@@ -1,3 +1,7 @@
+
+
+https://github.com/user-attachments/assets/2d0d30b7-14ad-4b86-9eb6-ea422a811269
+
 # 🚁 UAV X-Vision: Hệ Thống Huấn Luyện Học Tăng Cường Cho UAV
 
 Dự án **UAV X-Vision** cung cấp một hệ thống huấn luyện toàn diện cho máy bay không người lái (UAV - dựa trên mẫu khung *Iris* từ *Pegasus Simulation*) sử dụng Học tăng cường (Reinforcement Learning - RL). Được xây dựng trên nền tảng **Isaac Lab** và framework **RSL-RL**, hệ thống tập trung vào các tác vụ điều hướng, bám sát mục tiêu di động, hạ cánh, và tích hợp AI Computer Vision để nhận diện đối tượng/cảnh báo nguy hiểm (cháy nổ) trong các môi trường phức tạp.
