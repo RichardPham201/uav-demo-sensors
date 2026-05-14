@@ -1,6 +1,13 @@
-
-
-https://github.com/user-attachments/assets/2d0d30b7-14ad-4b86-9eb6-ea422a811269
+<div align="center">
+  <video src="https://github.com/user-attachments/assets/2d0d30b7-14ad-4b86-9eb6-ea422a811269" 
+    width="100%" 
+    style="max-width: 900px; border-radius: 10px;" 
+    autoplay 
+    muted 
+    loop 
+    playsinline>
+  </video>
+</div>
 
 # 🚁 UAV X-Vision: Hệ Thống Huấn Luyện Học Tăng Cường Cho UAV
 
